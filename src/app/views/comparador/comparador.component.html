@@ -1,0 +1,113 @@
+<section class="section">
+  <div class="section-header">
+    <div>
+      <p class="eyebrow">Comparador de precios y mercados</p>
+      <h2>Encuentra el mejor mercado cerca de ti</h2>
+    </div>
+    <span class="tag">Core</span>
+  </div>
+  <div class="comparison-grid">
+    <div class="card location-card">
+      <h3>Selecciona tu ubicacion</h3>
+      <p class="muted">Elige GPS o selecciona departamento y ciudad.</p>
+      <button class="btn btn-accent">Usar mi ubicacion actual</button>
+      <div class="form-row">
+        <label class="field-label" for="departamento">Departamento</label>
+        <select id="departamento">
+          <option>Antioquia</option>
+          <option>Bogota D.C.</option>
+          <option>Valle del Cauca</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="field-label" for="ciudad">Ciudad</label>
+        <select id="ciudad">
+          <option>Medellin</option>
+          <option>Bogota</option>
+          <option>Cali</option>
+        </select>
+      </div>
+      <div class="map-placeholder">
+        <div>
+          <p>Mapa de mercados cercanos</p>
+          <span>Leaflet.js + OpenStreetMap</span>
+        </div>
+      </div>
+    </div>
+    <div class="card temporal-card">
+      <h3>Comparacion temporal</h3>
+      <p class="muted">Periodo A vs Periodo B con datos de prueba.</p>
+      <div class="date-grid">
+        <div class="form-row">
+          <label class="field-label" for="periodo-a">Periodo A</label>
+          <input id="periodo-a" type="date" value="2025-05-01" />
+        </div>
+        <div class="form-row">
+          <label class="field-label" for="periodo-b">Periodo B</label>
+          <input id="periodo-b" type="date" value="2025-12-01" />
+        </div>
+      </div>
+      <div class="table-block">
+        <p class="table-title">Mercado vs Periodo</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Mercado</th>
+              <th>Periodo A</th>
+              <th>Periodo B</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of marketPeriodTable; track row.market) {
+              <tr>
+                <td>{{ row.market }}</td>
+                <td>$ {{ row.periodA }}</td>
+                <td>$ {{ row.periodB }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="table-block">
+        <p class="table-title">Periodo vs Mercado</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Periodo</th>
+              <th>Mercado 1</th>
+              <th>Mercado 2</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of periodMarketTable; track row.period) {
+              <tr>
+                <td>{{ row.period }}</td>
+                <td>$ {{ row.market1 }}</td>
+                <td>$ {{ row.market2 }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="section-subgrid">
+    <h3>Top 3 mercados cercanos</h3>
+    <div class="market-grid">
+      @for (market of nearbyMarkets; track market.name) {
+        <article class="card market-card">
+          <div class="market-header">
+            <h4>{{ market.name }}</h4>
+            <span class="tag">{{ market.distance }} km</span>
+          </div>
+          <p class="muted">{{ market.address }}</p>
+          <p class="price">$ {{ market.price }} / {{ market.unit }}</p>
+          <p class="trend" [class.up]="market.trend === 'down'" [class.down]="market.trend === 'up'">
+            <span class="trend-icon">{{ market.trend === 'down' ? '↓' : '↑' }}</span>
+            {{ market.note }}
+          </p>
+        </article>
+      }
+    </div>
+  </div>
+</section>

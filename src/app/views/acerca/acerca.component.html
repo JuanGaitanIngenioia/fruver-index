@@ -1,0 +1,35 @@
+<section class="section">
+  <div class="section-header">
+    <div>
+      <p class="eyebrow">Acerca de nosotros</p>
+      <h2>Transparencia de precios para todos</h2>
+    </div>
+  </div>
+  <div class="about-grid">
+    <div class="card">
+      <h3>Storytelling</h3>
+      <p>
+        Fruver Index nace para que los hogares colombianos entiendan cuanto cuesta la canasta
+        familiar y donde pueden ahorrar sin perder calidad.
+      </p>
+    </div>
+    <div class="card">
+      <h3>Metodologia</h3>
+      <p>
+        Los datos provienen del reporte semanal del DANE. Limpiamos, normalizamos y presentamos los
+        precios por ciudad y tipo de mercado.
+      </p>
+    </div>
+    <div class="card">
+      <h3>Webhooks requeridos</h3>
+      <ul class="hook-list">
+        @for (hook of webhooks; track hook.name) {
+          <li>
+            <span class="hook-name">{{ hook.name }}</span>
+            <span class="muted">{{ hook.description }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+  </div>
+</section>

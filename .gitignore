@@ -11,6 +11,9 @@
 npm-debug.log
 yarn-error.log
 
+# Context
+/context
+
 # IDEs and editors
 .idea/
 .project

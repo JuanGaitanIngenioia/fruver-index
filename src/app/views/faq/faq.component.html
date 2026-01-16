@@ -1,0 +1,16 @@
+<section class="section">
+  <div class="section-header">
+    <div>
+      <p class="eyebrow">Preguntas frecuentes</p>
+      <h2>Lo que mas nos preguntan</h2>
+    </div>
+  </div>
+  <div class="faq-list">
+    @for (faq of faqs; track faq.question) {
+      <details class="faq-item">
+        <summary>{{ faq.question }}</summary>
+        <p>{{ faq.answer }}</p>
+      </details>
+    }
+  </div>
+</section>

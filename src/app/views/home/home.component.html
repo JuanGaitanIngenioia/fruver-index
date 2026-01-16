@@ -1,0 +1,76 @@
+<section class="section hero-section">
+  <div class="hero-content">
+    <div class="hero-text">
+      <p class="eyebrow">Panel de control de la canasta</p>
+      <h1>Busca, compara y ahorra en tu mercado de confianza.</h1>
+      <p class="lead">
+        Fruver Index reune los precios oficiales del DANE y los acerca a tu barrio. Usa el buscador
+        para entender la tendencia de tus productos favoritos.
+      </p>
+      <div class="search-card" role="search">
+        <label for="buscador" class="field-label">Buscador de productos</label>
+        <div class="search-input">
+          <input
+            id="buscador"
+            type="search"
+            placeholder="?Que buscas hoy? Ej. Tomate Chonto"
+            aria-label="Buscar producto"
+          />
+          <button class="btn btn-accent">Buscar</button>
+        </div>
+        <div class="chip-row">
+          @for (chip of quickFilters; track chip) {
+            <span class="chip">{{ chip }}</span>
+          }
+        </div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="card chart-card">
+        <div class="card-header">
+          <div>
+            <h3>Valor de la canasta familiar</h3>
+            <p class="muted">Ultimos 12 meses · Datos de prueba</p>
+          </div>
+          <span class="tag">+4.2% anual</span>
+        </div>
+        <div class="chart-area" aria-label="Grafico de areas de canasta familiar">
+          <svg viewBox="0 0 560 200" role="img" aria-hidden="true">
+            <defs>
+              <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#2D5A27" stop-opacity="0.45"></stop>
+                <stop offset="100%" stop-color="#2D5A27" stop-opacity="0"></stop>
+              </linearGradient>
+            </defs>
+            <path
+              d="M0 150 L60 130 L120 140 L180 110 L240 120 L300 90 L360 100 L420 70 L480 80 L540 60 L560 65 L560 200 L0 200 Z"
+              fill="url(#areaFill)"
+            ></path>
+            <path
+              d="M0 150 L60 130 L120 140 L180 110 L240 120 L300 90 L360 100 L420 70 L480 80 L540 60 L560 65"
+              fill="none"
+              stroke="#2D5A27"
+              stroke-width="3"
+            ></path>
+          </svg>
+          <div class="chart-legend">
+            <span>Promedio mensual: $ 312.500</span>
+            <span>Maximo: $ 345.200</span>
+          </div>
+        </div>
+      </div>
+      <div class="kpi-grid">
+        @for (kpi of kpis; track kpi.title) {
+          <div class="card kpi-card">
+            <p class="kpi-label">{{ kpi.title }}</p>
+            <p class="kpi-value">{{ kpi.product }}</p>
+            <p class="kpi-change" [class.up]="kpi.trend === 'up'" [class.down]="kpi.trend === 'down'">
+              <span class="trend-icon">{{ kpi.trend === 'up' ? '↑' : '↓' }}</span>
+              {{ kpi.detail }}
+            </p>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</section>

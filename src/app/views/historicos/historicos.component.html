@@ -1,0 +1,43 @@
+<section class="section">
+  <div class="section-header">
+    <div>
+      <p class="eyebrow">Precios historicos</p>
+      <h2>Analisis profundo por producto</h2>
+    </div>
+    <div class="range-buttons" role="group" aria-label="Rango de tiempo">
+      @for (range of ranges; track range) {
+        <button class="btn btn-secondary btn-sm">{{ range }}</button>
+      }
+    </div>
+  </div>
+  <div class="history-grid">
+    <div class="card">
+      <h3>Precio historico del tomate chonto</h3>
+      <p class="muted">Hover sobre el grafico para ver precio exacto.</p>
+      <div class="chart-area line">
+        <svg viewBox="0 0 560 220" role="img" aria-hidden="true">
+          <path
+            d="M10 180 L70 160 L130 140 L190 150 L250 120 L310 130 L370 90 L430 110 L490 80 L550 100"
+            fill="none"
+            stroke="#F28C28"
+            stroke-width="3"
+          ></path>
+          <circle cx="310" cy="130" r="5" fill="#F28C28"></circle>
+        </svg>
+        <div class="chart-tooltip">$ 2.950 · 12 Jun 2025</div>
+      </div>
+      <p class="caption">Para rango 5A se usa promedio mensual.</p>
+    </div>
+    <div class="card insight-card">
+      <h3>Insights IA</h3>
+      <p class="insight-text">
+        "Historicamente, este producto baja de precio en los meses de Junio y Julio debido a la
+        cosecha en la region de Boyaca."
+      </p>
+      <div class="insight-meta">
+        <span class="tag">Insight simulado</span>
+        <span class="muted">Actualizado: 08 Ene 2026</span>
+      </div>
+    </div>
+  </div>
+</section>

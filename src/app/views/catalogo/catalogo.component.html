@@ -1,0 +1,52 @@
+<section class="section">
+  <div class="section-header">
+    <div>
+      <p class="eyebrow">Catalogo de productos</p>
+      <h2>Navegacion rapida por categorias</h2>
+    </div>
+    <button class="btn btn-secondary">Ver todos</button>
+  </div>
+  <div class="catalog-layout">
+    <aside class="filters card">
+      <h3>Filtros laterales</h3>
+      <div class="filter-group">
+        <p class="filter-title">Categorias</p>
+        @for (category of categories; track category) {
+          <label class="checkbox">
+            <input type="checkbox" />
+            <span>{{ category }}</span>
+          </label>
+        }
+      </div>
+      <div class="filter-group">
+        <p class="filter-title">Sugerencias</p>
+        <div class="chip-row">
+          @for (chip of quickFilters; track chip) {
+            <span class="chip">{{ chip }}</span>
+          }
+        </div>
+      </div>
+    </aside>
+    <div class="product-grid">
+      @for (product of products; track product.name) {
+        <article class="card product-card">
+          <div class="product-image" aria-hidden="true">
+            <span>{{ product.emoji }}</span>
+          </div>
+          <div class="product-body">
+            <div class="product-title">
+              <h4>{{ product.name }}</h4>
+              <span class="tag">{{ product.category }}</span>
+            </div>
+            <p class="price">$ {{ product.price }} / {{ product.unit }}</p>
+            <p class="trend" [class.up]="product.trend === 'up'" [class.down]="product.trend === 'down'">
+              <span class="trend-icon">{{ product.trend === 'up' ? '↑' : '↓' }}</span>
+              {{ product.trend === 'up' ? 'Subio' : 'Bajo' }} {{ product.change }}
+            </p>
+            <button class="btn btn-primary btn-sm">Comparar precios</button>
+          </div>
+        </article>
+      }
+    </div>
+  </div>
+</section>
