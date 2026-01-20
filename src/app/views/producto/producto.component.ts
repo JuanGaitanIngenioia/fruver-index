@@ -87,7 +87,20 @@ export class ProductoComponent {
   readonly fechaAnterior = computed(() => this.periodoAnterior()?.fechaInicio ?? '');
 
   // Helpers para formateo seguro de indicadores
-  formatPct(value: number | undefined | null, decimals = 1): string {
+  
+  /**
+   * Formatea un porcentaje mostrando solo el valor absoluto (sin signo).
+   * El signo se muestra con getTrendIcon.
+   */
+  formatPct(value: number | undefined | null, decimals = 2): string {
+    if (value === undefined || value === null || !Number.isFinite(value)) return '—';
+    return `${Math.abs(value).toFixed(decimals)}%`;
+  }
+
+  /**
+   * Formatea un porcentaje con signo explícito (+/-)
+   */
+  formatPctSigned(value: number | undefined | null, decimals = 2): string {
     if (value === undefined || value === null || !Number.isFinite(value)) return '—';
     const sign = value >= 0 ? '+' : '';
     return `${sign}${value.toFixed(decimals)}%`;
@@ -98,18 +111,18 @@ export class ProductoComponent {
     return value.toFixed(decimals);
   }
 
-  getTrendClass(value: number | undefined | null, threshold = 0.5): 'up' | 'down' | 'neutral' {
+  getTrendClass(value: number | undefined | null, threshold = 0.05): 'up' | 'down' | 'neutral' {
     if (value === undefined || value === null || !Number.isFinite(value)) return 'neutral';
     if (value > threshold) return 'up';
     if (value < -threshold) return 'down';
     return 'neutral';
   }
 
-  getTrendIcon(value: number | undefined | null, threshold = 0.5): string {
-    if (value === undefined || value === null || !Number.isFinite(value)) return '→';
-    if (value > threshold) return '↑';
-    if (value < -threshold) return '↓';
-    return '→';
+  getTrendIcon(value: number | undefined | null, threshold = 0.05): string {
+    if (value === undefined || value === null || !Number.isFinite(value)) return '=';
+    if (value > threshold) return '+';
+    if (value < -threshold) return '-';
+    return '=';
   }
 
   @ViewChild('chartCanvas', { static: false }) chartCanvas?: ElementRef<HTMLCanvasElement>;

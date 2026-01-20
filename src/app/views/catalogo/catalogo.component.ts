@@ -61,9 +61,9 @@ export class CatalogoComponent {
       grupo_alimentos: r.grupo_alimentos,
       codigo_grupo: r.codigo_grupo,
       precioActual: r.precioActual,
-      precioAnterior: null,
-      cambioPct: null,
-      tendenciaScore: 0
+      precioAnterior: r.precioAnterior ?? null,
+      cambioPct: r.cambioPct ?? null,
+      tendenciaScore: r.cambioPct ?? 0 // Usamos el cambio porcentual como score
     }));
   }
 
@@ -83,29 +83,36 @@ export class CatalogoComponent {
     return '🥗';
   }
 
+  /**
+   * Determina la tendencia basada en el cambio de precio:
+   * - up: precio subió (cambioPct > 0)
+   * - down: precio bajó (cambioPct < 0)
+   * - neutral: sin cambio significativo (umbral muy pequeño: 0.05%)
+   */
   trendFor(item: CatalogoItem): 'up' | 'down' | 'neutral' {
     const change = item.cambioPct;
-    const score = item.tendenciaScore;
 
-    // Si el cambio es null, NaN, 0, o muy pequeño → neutral
-    if (change === null || !Number.isFinite(change) || Math.abs(change) < 0.1) {
-      // Verificar también el score de tendencia
-      if (!Number.isFinite(score) || score === 0) {
-        return 'neutral';
-      }
-      return score > 0 ? 'up' : 'down';
+    // Si el cambio es null, NaN, o prácticamente 0 → neutral
+    if (change === null || !Number.isFinite(change) || Math.abs(change) < 0.05) {
+      return 'neutral';
     }
     
-    return change > 0 ? 'up' : change < 0 ? 'down' : 'neutral';
+    return change > 0 ? 'up' : 'down';
   }
 
+  /**
+   * Muestra el porcentaje de cambio
+   */
   changeLabel(item: CatalogoItem): string {
     const change = item.cambioPct;
-    if (change === null || !Number.isFinite(change)) return '—';
-    if (Math.abs(change) < 0.1) return 'Sin cambio';
-    return `${Math.abs(change).toFixed(1)}%`;
+    if (change === null || !Number.isFinite(change)) return '';
+    if (Math.abs(change) < 0.05) return '';
+    return `${Math.abs(change).toFixed(2)}%`;
   }
 
+  /**
+   * Texto de la tendencia: Subió o Bajó
+   */
   trendText(item: CatalogoItem): string {
     const trend = this.trendFor(item);
     if (trend === 'up') return 'Subió';
@@ -113,11 +120,14 @@ export class CatalogoComponent {
     return 'Estable';
   }
 
+  /**
+   * Icono de tendencia: + (verde/subió) o - (rojo/bajó) o = (neutral)
+   */
   trendIcon(item: CatalogoItem): string {
     const trend = this.trendFor(item);
-    if (trend === 'up') return '↑';
-    if (trend === 'down') return '↓';
-    return '→';
+    if (trend === 'up') return '+';
+    if (trend === 'down') return '-';
+    return '=';
   }
 
   navigateToProducto(productName: string): void {

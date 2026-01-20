@@ -45,11 +45,11 @@
   font-weight: 700;
 
   &.up {
-    color: #c0392b;
+    color: #27ae60; /* Verde: subió */
   }
 
   &.down {
-    color: #27ae60;
+    color: #c0392b; /* Rojo: bajó */
   }
 
   &.neutral {

@@ -32,9 +32,9 @@
         @if (indicadores()) {
           <div class="kpi-row">
             <div class="kpi">
-              <p class="kpi-label">IPC-Agro</p>
-              <p class="kpi-value" [class.up]="getTrendClass(indicadores()!.ipcAgro, 0.5) === 'up'" [class.down]="getTrendClass(indicadores()!.ipcAgro, 0.5) === 'down'" [class.neutral]="getTrendClass(indicadores()!.ipcAgro, 0.5) === 'neutral'">
-                <span class="trend-icon">{{ getTrendIcon(indicadores()!.ipcAgro, 0.5) }}</span>
+              <p class="kpi-label">IPC-Agro (Inflación)</p>
+              <p class="kpi-value" [class.up]="getTrendClass(indicadores()!.ipcAgro, 0.05) === 'up'" [class.down]="getTrendClass(indicadores()!.ipcAgro, 0.05) === 'down'" [class.neutral]="getTrendClass(indicadores()!.ipcAgro, 0.05) === 'neutral'">
+                <span class="trend-icon">{{ getTrendIcon(indicadores()!.ipcAgro, 0.05) }}</span>
                 {{ formatPct(indicadores()!.ipcAgro) }}
               </p>
             </div>
@@ -47,9 +47,9 @@
               <p class="kpi-value">{{ formatNumber(indicadores()!.friccionSpread, 2) }}</p>
             </div>
             <div class="kpi">
-              <p class="kpi-label">Tendencia</p>
-              <p class="kpi-value" [class.up]="getTrendClass(indicadores()!.scoreTendencia, 5) === 'up'" [class.down]="getTrendClass(indicadores()!.scoreTendencia, 5) === 'down'" [class.neutral]="getTrendClass(indicadores()!.scoreTendencia, 5) === 'neutral'">
-                <span class="trend-icon">{{ getTrendIcon(indicadores()!.scoreTendencia, 5) }}</span>
+              <p class="kpi-label">Score Tendencia</p>
+              <p class="kpi-value" [class.up]="getTrendClass(indicadores()!.scoreTendencia, 1) === 'up'" [class.down]="getTrendClass(indicadores()!.scoreTendencia, 1) === 'down'" [class.neutral]="getTrendClass(indicadores()!.scoreTendencia, 1) === 'neutral'">
+                <span class="trend-icon">{{ getTrendIcon(indicadores()!.scoreTendencia, 1) }}</span>
                 {{ formatPct(indicadores()!.scoreTendencia, 0) }}
               </p>
             </div>

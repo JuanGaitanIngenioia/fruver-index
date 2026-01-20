@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { supabase } from '../data/supabase.client';
 import { CacheService } from './cache.service';
 import type { FruverData, RangoHistorico } from '../models/fruver-data.model';
-import { formatYearMonth, groupBy, median, percentChange } from '../utils/stats';
+import { formatYearMonth, groupBy, median } from '../utils/stats';
 
 export type ProductoPeriodo = {
   fechaInicio: string;
@@ -29,6 +29,8 @@ export type CatalogoBasicoItem = {
   grupo_alimentos: string;
   codigo_grupo: number;
   precioActual: number; // mediana nacional del último periodo global
+  precioAnterior: number | null; // precio del periodo anterior
+  cambioPct: number | null; // cambio porcentual entre periodos
   fechaInicio: string; // último periodo global
 };
 
@@ -99,6 +101,8 @@ export class FruverDataService {
         grupo_alimentos: string;
         codigo_grupo: number;
         fecha_inicio: string;
+        precio_anterior: number | null;
+        cambio_pct: number | null;
       }>;
 
       console.log('[FruverData] Productos cargados:', rows.length);
@@ -109,6 +113,8 @@ export class FruverDataService {
           grupo_alimentos: r.grupo_alimentos ?? 'desconocido',
           codigo_grupo: Number(r.codigo_grupo ?? 0),
           precioActual: r.precio_medio,
+          precioAnterior: r.precio_anterior ?? null,
+          cambioPct: r.cambio_pct ?? null,
           fechaInicio: r.fecha_inicio ?? ''
         }))
         .sort((a, b) => a.producto.localeCompare(b.producto));
@@ -127,24 +133,49 @@ export class FruverDataService {
   }
 
   /**
+   * Obtiene las fechas distintas disponibles para un producto, ordenadas descendente.
+   */
+  private async getFechasDistintas(producto: string): Promise<Array<{ fecha_inicio: string; fecha_final: string }>> {
+    const key = `producto:${producto}:fechasDistintas`;
+    return this.cache.cached(key, TTL_1H, async () => {
+      // Traer hasta 100 registros ordenados por fecha descendente y extraer fechas únicas
+      const { data, error } = await supabase
+        .from('fruver_data')
+        .select('fecha_inicio,fecha_final')
+        .eq('producto', producto)
+        .order('fecha_inicio', { ascending: false })
+        .limit(500);
+
+      if (error) throw error;
+
+      // Extraer fechas únicas (YYYY-MM-DD como texto se ordena correctamente)
+      const fechasMap = new Map<string, string>();
+      for (const row of data ?? []) {
+        if (row.fecha_inicio && !fechasMap.has(row.fecha_inicio)) {
+          fechasMap.set(row.fecha_inicio, row.fecha_final ?? row.fecha_inicio);
+        }
+      }
+
+      // Ordenar por fecha_inicio descendente
+      return Array.from(fechasMap.entries())
+        .map(([fecha_inicio, fecha_final]) => ({ fecha_inicio, fecha_final }))
+        .sort((a, b) => b.fecha_inicio.localeCompare(a.fecha_inicio));
+    });
+  }
+
+  /**
    * Obtiene datos del último periodo para un producto.
+   * El periodo A (actual) es el último registro disponible.
    */
   async getUltimoPeriodo(producto: string): Promise<ProductoPeriodo> {
     const p = producto.toLowerCase();
     const key = `producto:${p}:ultimoPeriodo`;
 
     return this.cache.cached(key, TTL_1H, async () => {
-      const { data: fechas, error: fechaError } = await supabase
-        .from('fruver_data')
-        .select('fecha_inicio,fecha_final')
-        .eq('producto', p)
-        .order('fecha_inicio', { ascending: false })
-        .limit(1);
+      const fechas = await this.getFechasDistintas(p);
+      if (fechas.length === 0) return { fechaInicio: '', fechaFinal: '', rows: [] };
 
-      if (fechaError) throw fechaError;
-      const fechaInicio = fechas?.[0]?.fecha_inicio;
-      const fechaFinal = fechas?.[0]?.fecha_final;
-      if (!fechaInicio || !fechaFinal) return { fechaInicio: '', fechaFinal: '', rows: [] };
+      const { fecha_inicio: fechaInicio, fecha_final: fechaFinal } = fechas[0];
 
       const rows = await this.fetchAll<FruverData>(async (from, to) => {
         const { data, error } = await supabase
@@ -165,23 +196,17 @@ export class FruverDataService {
 
   /**
    * Obtiene datos del periodo anterior para un producto.
+   * El periodo B (anterior) es el inmediatamente anterior al último.
    */
   async getPeriodoAnterior(producto: string): Promise<ProductoPeriodo> {
     const p = producto.toLowerCase();
     const key = `producto:${p}:periodoAnterior`;
 
     return this.cache.cached(key, TTL_1H, async () => {
-      const { data: fechas, error: fechaError } = await supabase
-        .from('fruver_data')
-        .select('fecha_inicio,fecha_final')
-        .eq('producto', p)
-        .order('fecha_inicio', { ascending: false })
-        .limit(2);
+      const fechas = await this.getFechasDistintas(p);
+      if (fechas.length < 2) return { fechaInicio: '', fechaFinal: '', rows: [] };
 
-      if (fechaError) throw fechaError;
-      const fechaInicio = fechas?.[1]?.fecha_inicio;
-      const fechaFinal = fechas?.[1]?.fecha_final;
-      if (!fechaInicio || !fechaFinal) return { fechaInicio: '', fechaFinal: '', rows: [] };
+      const { fecha_inicio: fechaInicio, fecha_final: fechaFinal } = fechas[1];
 
       const rows = await this.fetchAll<FruverData>(async (from, to) => {
         const { data, error } = await supabase
