@@ -1,0 +1,100 @@
+.product-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.section-header.compact {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chart-wrap {
+  position: relative;
+  height: 260px;
+  margin-top: 12px;
+}
+
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.kpi-label {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(26, 26, 26, 0.7);
+}
+
+.kpi-value {
+  margin: 6px 0 0 0;
+  font-size: 18px;
+  font-weight: 700;
+
+  &.up {
+    color: #c0392b;
+  }
+
+  &.down {
+    color: #27ae60;
+  }
+
+  &.neutral {
+    color: rgba(26, 26, 26, 0.6);
+  }
+
+  .trend-icon {
+    margin-right: 4px;
+  }
+}
+
+.var-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.var-card {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(248, 249, 250, 0.8);
+  border: 1px solid rgba(26, 26, 26, 0.08);
+}
+
+.card.inner {
+  margin-top: 12px;
+}
+
+@media (min-width: 992px) {
+  .product-grid {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+
+  .comparison-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .kpi-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .var-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+

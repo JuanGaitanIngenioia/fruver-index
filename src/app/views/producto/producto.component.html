@@ -1,0 +1,179 @@
+<section class="section">
+  <div class="section-header">
+    <div>
+      <p class="eyebrow">Producto</p>
+      <h2>{{ titulo() }}</h2>
+      @if (fechaActual()) {
+        <p class="muted">Periodo actual: {{ fechaActual() }} · Periodo anterior: {{ fechaAnterior() }}</p>
+      }
+    </div>
+    <a class="btn btn-secondary" routerLink="/catalogo">Volver al catalogo</a>
+  </div>
+
+  @if (error()) {
+    <div class="card">
+      <h3>No se pudo cargar</h3>
+      <p class="muted">{{ error() }}</p>
+      <p class="caption">
+        Si esto ocurre, revisa que `fruver_data` permita lectura con la key pública (RLS/policies).
+      </p>
+    </div>
+  } @else if (loading()) {
+    <div class="card">
+      <p class="muted">Cargando datos desde Supabase…</p>
+    </div>
+  } @else {
+    <div class="product-grid">
+      <div class="card">
+        <h3>Resumen</h3>
+        <p class="price">$ {{ precioNacionalActual().toLocaleString('es-CO') }}</p>
+        <p class="muted">Mediana nacional del periodo actual</p>
+
+        @if (indicadores()) {
+          <div class="kpi-row">
+            <div class="kpi">
+              <p class="kpi-label">IPC-Agro</p>
+              <p class="kpi-value" [class.up]="getTrendClass(indicadores()!.ipcAgro, 0.5) === 'up'" [class.down]="getTrendClass(indicadores()!.ipcAgro, 0.5) === 'down'" [class.neutral]="getTrendClass(indicadores()!.ipcAgro, 0.5) === 'neutral'">
+                <span class="trend-icon">{{ getTrendIcon(indicadores()!.ipcAgro, 0.5) }}</span>
+                {{ formatPct(indicadores()!.ipcAgro) }}
+              </p>
+            </div>
+            <div class="kpi">
+              <p class="kpi-label">Disparidad (CV)</p>
+              <p class="kpi-value">{{ formatNumber(indicadores()!.disparidadRegionalCv) }}%</p>
+            </div>
+            <div class="kpi">
+              <p class="kpi-label">Spread</p>
+              <p class="kpi-value">{{ formatNumber(indicadores()!.friccionSpread, 2) }}</p>
+            </div>
+            <div class="kpi">
+              <p class="kpi-label">Tendencia</p>
+              <p class="kpi-value" [class.up]="getTrendClass(indicadores()!.scoreTendencia, 5) === 'up'" [class.down]="getTrendClass(indicadores()!.scoreTendencia, 5) === 'down'" [class.neutral]="getTrendClass(indicadores()!.scoreTendencia, 5) === 'neutral'">
+                <span class="trend-icon">{{ getTrendIcon(indicadores()!.scoreTendencia, 5) }}</span>
+                {{ formatPct(indicadores()!.scoreTendencia, 0) }}
+              </p>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="card">
+        <div class="section-header compact">
+          <div>
+            <h3>Históricos</h3>
+            <p class="muted">Precio mediana nacional en el tiempo</p>
+          </div>
+          <div class="range-buttons" role="group" aria-label="Rango de tiempo">
+            @for (r of ranges; track r) {
+              <button
+                class="btn btn-secondary btn-sm"
+                [class.active]="range() === r"
+                (click)="setRange(r)"
+              >
+                {{ r }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="chart-wrap">
+          <canvas #chartCanvas></canvas>
+        </div>
+
+        @if (volatilidad()) {
+          <p class="caption">Volatilidad (std dev variación %): {{ volatilidad().toFixed(1) }}</p>
+        }
+      </div>
+    </div>
+
+    <div class="comparison-grid">
+      <div class="card">
+        <h3>Comparación temporal</h3>
+        <p class="muted">Mercado vs Periodo (Actual vs Anterior)</p>
+        <div class="table-block">
+          <table>
+            <thead>
+              <tr>
+                <th>Mercado</th>
+                <th>Periodo A</th>
+                <th>Periodo B</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of tablaMercadoPeriodo(); track row.market) {
+                <tr>
+                  <td>{{ row.market }}</td>
+                  <td>@if (row.periodA !== null) { $ {{ row.periodA!.toLocaleString('es-CO') }} } @else { — }</td>
+                  <td>@if (row.periodB !== null) { $ {{ row.periodB!.toLocaleString('es-CO') }} } @else { — }</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="caption">Top mercados (ordenado por precio del periodo A).</p>
+      </div>
+
+      <div class="card">
+        <h3>Variables de negocio</h3>
+        <p class="muted">Recomendaciones calculadas</p>
+
+        @if (variables()) {
+          <div class="var-grid">
+            <div class="var-card">
+              <p class="kpi-label">Estabilidad de compra</p>
+              <p class="kpi-value">{{ variables()!.estabilidadCompra.estrellas }}</p>
+              <p class="caption">{{ variables()!.estabilidadCompra.descripcion }} · Riesgo {{ variables()!.estabilidadCompra.riesgo }}</p>
+            </div>
+
+            <div class="var-card">
+              <p class="kpi-label">Momentum</p>
+              <p class="kpi-value">{{ variables()!.velocidadTendencia.cambio }}</p>
+              <p class="caption">Recomendación: {{ variables()!.velocidadTendencia.recomendacion }}</p>
+            </div>
+
+            <div class="var-card">
+              <p class="kpi-label">Alerta</p>
+              <p class="kpi-value">{{ variables()!.alerta }}</p>
+              <p class="caption">Volatilidad: {{ volatilidad().toFixed(1) }}</p>
+            </div>
+
+            <div class="var-card">
+              <p class="kpi-label">Costo de reposición</p>
+              <p class="kpi-value">$ {{ variables()!.costoReposicion.precioReposicion.toLocaleString('es-CO') }}</p>
+              <p class="caption">{{ variables()!.costoReposicion.recomendacion }}</p>
+            </div>
+
+            @if (variables()!.margenArbitrajeBogota) {
+              <div class="var-card">
+                <p class="kpi-label">Arbitraje Bogotá</p>
+                <p class="kpi-value">{{ variables()!.margenArbitrajeBogota!.recomendacion }}</p>
+                <p class="caption">
+                  Neto: {{ variables()!.margenArbitrajeBogota!.margenNeto.toFixed(1) }}% · Bruto:
+                  {{ variables()!.margenArbitrajeBogota!.margenBruto.toFixed(1) }}%
+                </p>
+              </div>
+            }
+
+            @if (variables()!.precioProyectado7d) {
+              <div class="var-card">
+                <p class="kpi-label">Proyección 7 días</p>
+                <p class="kpi-value">$ {{ variables()!.precioProyectado7d!.toLocaleString('es-CO') }}</p>
+                <p class="caption">Estimación basada en tendencia + regresión simple.</p>
+              </div>
+            }
+          </div>
+
+          @if (sustitucion()) {
+            <div class="card inner">
+              <h4>Sustitución sugerida</h4>
+              <p class="muted">{{ sustitucion()!.recomendacion }}</p>
+            </div>
+          }
+        } @else {
+          <p class="muted">Sin suficientes datos para calcular variables.</p>
+        }
+      </div>
+    </div>
+  }
+</section>
+

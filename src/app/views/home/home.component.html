@@ -9,20 +9,38 @@
       </p>
       <div class="search-card" role="search">
         <label for="buscador" class="field-label">Buscador de productos</label>
-        <div class="search-input">
-          <input
-            id="buscador"
-            type="search"
-            placeholder="?Que buscas hoy? Ej. Tomate Chonto"
-            aria-label="Buscar producto"
-          />
-          <button class="btn btn-accent">Buscar</button>
-        </div>
-        <div class="chip-row">
-          @for (chip of quickFilters; track chip) {
-            <span class="chip">{{ chip }}</span>
+        <div class="search-wrapper">
+          <div class="search-input">
+            <input
+              id="buscador"
+              #buscador
+              type="search"
+              placeholder="¿Qué buscas hoy? Ej. Tomate Chonto"
+              aria-label="Buscar producto"
+              [value]="searchQuery()"
+              (input)="onSearchInput(buscador.value)"
+              (keydown.enter)="buscar(buscador.value)"
+              (blur)="ocultarSugerencias()"
+              autocomplete="off"
+            />
+            <button class="btn btn-accent" (click)="buscar(buscador.value)">Buscar</button>
+          </div>
+          @if (showSuggestions() && sugerencias().length > 0) {
+            <ul class="suggestions-list">
+              @for (item of sugerencias(); track item.producto) {
+                <li (mousedown)="seleccionarProducto(item)">
+                  <span class="suggestion-name">{{ item.producto }}</span>
+                  <span class="suggestion-price">$ {{ item.precioActual.toLocaleString('es-CO') }}</span>
+                </li>
+              }
+            </ul>
           }
         </div>
+        @if (loading()) {
+          <p class="muted">Cargando productos…</p>
+        } @else if (productos().length > 0) {
+          <p class="muted">{{ productos().length }} productos disponibles</p>
+        }
       </div>
     </div>
     <div class="hero-visual">
@@ -30,12 +48,12 @@
         <div class="card-header">
           <div>
             <h3>Valor de la canasta familiar</h3>
-            <p class="muted">Ultimos 12 meses · Datos de prueba</p>
+            <p class="muted">Ultimos 12 meses · Visualización base</p>
           </div>
           <span class="tag">+4.2% anual</span>
         </div>
         <div class="chart-area" aria-label="Grafico de areas de canasta familiar">
-          <svg viewBox="0 0 560 200" role="img" aria-hidden="true">
+          <svg viewBox="0 0 560 200" aria-hidden="true">
             <defs>
               <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stop-color="#2D5A27" stop-opacity="0.45"></stop>
@@ -58,18 +76,6 @@
             <span>Maximo: $ 345.200</span>
           </div>
         </div>
-      </div>
-      <div class="kpi-grid">
-        @for (kpi of kpis; track kpi.title) {
-          <div class="card kpi-card">
-            <p class="kpi-label">{{ kpi.title }}</p>
-            <p class="kpi-value">{{ kpi.product }}</p>
-            <p class="kpi-change" [class.up]="kpi.trend === 'up'" [class.down]="kpi.trend === 'down'">
-              <span class="trend-icon">{{ kpi.trend === 'up' ? '↑' : '↓' }}</span>
-              {{ kpi.detail }}
-            </p>
-          </div>
-        }
       </div>
     </div>
   </div>

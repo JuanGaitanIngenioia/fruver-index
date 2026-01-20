@@ -339,9 +339,15 @@ main {
 .product-card {
   display: grid;
   gap: var(--spacing-md);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.product-image {
+.product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--elevation-3);
+}
+
+.product-icon {
   background: var(--color-background);
   border-radius: 16px;
   padding: var(--spacing-lg);
@@ -375,6 +381,10 @@ main {
 
 .trend.down {
   color: var(--color-success);
+}
+
+.trend.neutral {
+  color: var(--color-text-muted);
 }
 
 .btn {

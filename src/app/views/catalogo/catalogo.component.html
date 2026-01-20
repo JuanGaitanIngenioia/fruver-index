@@ -6,47 +6,67 @@
     </div>
     <button class="btn btn-secondary">Ver todos</button>
   </div>
-  <div class="catalog-layout">
-    <aside class="filters card">
-      <h3>Filtros laterales</h3>
-      <div class="filter-group">
-        <p class="filter-title">Categorias</p>
-        @for (category of categories; track category) {
-          <label class="checkbox">
-            <input type="checkbox" />
-            <span>{{ category }}</span>
-          </label>
-        }
-      </div>
-      <div class="filter-group">
-        <p class="filter-title">Sugerencias</p>
-        <div class="chip-row">
-          @for (chip of quickFilters; track chip) {
-            <span class="chip">{{ chip }}</span>
+  @if (error()) {
+    <div class="card">
+      <h3>No se pudo cargar el catálogo</h3>
+      <p class="muted">{{ error() }}</p>
+    </div>
+  } @else {
+    <div class="catalog-layout">
+      <aside class="filters card">
+        <h3>Filtros laterales</h3>
+        <div class="filter-group">
+          <p class="filter-title">Categorias</p>
+          @for (category of categories(); track category) {
+            <label class="checkbox">
+              <input
+                type="checkbox"
+                [checked]="selectedCategories().has(category)"
+                (change)="toggleCategory(category, $any($event.target).checked)"
+              />
+              <span>{{ category }}</span>
+            </label>
           }
         </div>
+        <div class="filter-group">
+          <p class="filter-title">Sugerencias</p>
+          <div class="chip-row">
+            @for (chip of quickFilters; track chip) {
+              <span class="chip">{{ chip }}</span>
+            }
+          </div>
+        </div>
+      </aside>
+
+      <div class="product-grid">
+        @if (loading()) {
+          <div class="card">
+            <p class="muted">Cargando productos…</p>
+          </div>
+        } @else {
+          @for (item of filteredItems(); track item.producto) {
+            <article class="card product-card" (click)="navigateToProducto(item.producto)" style="cursor: pointer;">
+              <div class="product-icon" aria-hidden="true">
+                <span>{{ iconFor(item.grupo_alimentos) }}</span>
+              </div>
+              <div class="product-body">
+                <div class="product-title">
+                  <h4>{{ item.producto }}</h4>
+                  <span class="tag">{{ item.grupo_alimentos }}</span>
+                </div>
+                <p class="price">$ {{ item.precioActual.toLocaleString('es-CO') }} / kg</p>
+                <p class="trend" [class.up]="trendFor(item) === 'up'" [class.down]="trendFor(item) === 'down'" [class.neutral]="trendFor(item) === 'neutral'">
+                  <span class="trend-icon">{{ trendIcon(item) }}</span>
+                  {{ trendText(item) }} {{ changeLabel(item) }}
+                </p>
+                <button class="btn btn-primary btn-sm" (click)="navigateToProducto(item.producto); $event.stopPropagation()">
+                  Ver detalle
+                </button>
+              </div>
+            </article>
+          }
+        }
       </div>
-    </aside>
-    <div class="product-grid">
-      @for (product of products; track product.name) {
-        <article class="card product-card">
-          <div class="product-image" aria-hidden="true">
-            <span>{{ product.emoji }}</span>
-          </div>
-          <div class="product-body">
-            <div class="product-title">
-              <h4>{{ product.name }}</h4>
-              <span class="tag">{{ product.category }}</span>
-            </div>
-            <p class="price">$ {{ product.price }} / {{ product.unit }}</p>
-            <p class="trend" [class.up]="product.trend === 'up'" [class.down]="product.trend === 'down'">
-              <span class="trend-icon">{{ product.trend === 'up' ? '↑' : '↓' }}</span>
-              {{ product.trend === 'up' ? 'Subio' : 'Bajo' }} {{ product.change }}
-            </p>
-            <button class="btn btn-primary btn-sm">Comparar precios</button>
-          </div>
-        </article>
-      }
     </div>
-  </div>
+  }
 </section>
