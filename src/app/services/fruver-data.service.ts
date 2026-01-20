@@ -391,42 +391,74 @@ export class FruverDataService {
   }
 
   /**
+   * Obtiene todas las fechas distintas disponibles en la base de datos.
+   */
+  private async getFechasGlobalesDisponibles(): Promise<string[]> {
+    const key = 'fechas:globales:todas';
+    return this.cache.cached(key, TTL_1H, async () => {
+      // Obtener todas las fechas distintas de la tabla
+      const { data, error } = await supabase
+        .from('fruver_data')
+        .select('fecha_inicio')
+        .order('fecha_inicio', { ascending: true })
+        .limit(10000);
+
+      if (error) throw error;
+
+      const fechasSet = new Set<string>();
+      for (const row of (data ?? []) as Array<{ fecha_inicio: string }>) {
+        if (row.fecha_inicio) {
+          fechasSet.add(row.fecha_inicio);
+        }
+      }
+
+      const fechas = Array.from(fechasSet).sort((a, b) => a.localeCompare(b));
+      console.log(`[FruverData] Fechas globales disponibles: ${fechas.length}`, fechas.slice(-5));
+      return fechas;
+    });
+  }
+
+  /**
    * Serie semanal real de la canasta (suma de medianas por producto) para las últimas ~13 semanas.
    */
   async getCanastaSerieUltimasSemanas(productosCanasta: string[], semanas = 13): Promise<SeriePoint[]> {
-    const key = `canasta:serie:${semanas}`;
+    // Cache key incluye cantidad de productos para diferenciarlo
+    const productosLower = productosCanasta.map((p) => p.toLowerCase().trim()).filter(Boolean);
+    const key = `canasta:serie:${semanas}:${productosLower.length}`;
+    
     return this.cache.cached(key, TTL_1H, async () => {
-      const productosLower = productosCanasta.map((p) => p.toLowerCase().trim()).filter(Boolean);
       if (productosLower.length === 0) return [];
 
-      // Tomar las últimas N fechas globales disponibles (aprox)
-      const { data: fechasData, error: fechasError } = await supabase
-        .from('fruver_data')
-        .select('fecha_inicio')
-        .order('fecha_inicio', { ascending: false })
-        .limit(2000);
-      if (fechasError) throw fechasError;
+      // Obtener todas las fechas disponibles
+      const todasFechas = await this.getFechasGlobalesDisponibles();
+      
+      if (todasFechas.length === 0) {
+        console.warn('[FruverData] No hay fechas disponibles en la BD');
+        return [];
+      }
 
-      const fechas = Array.from(
-        new Set(((fechasData ?? []) as Array<{ fecha_inicio: string }>).map((r) => r.fecha_inicio).filter(Boolean))
-      )
-        .sort((a, b) => a.localeCompare(b))
-        .slice(-semanas);
+      // Tomar las últimas N semanas
+      const fechas = todasFechas.slice(-semanas);
+      console.log(`[FruverData] Cargando serie canasta para ${fechas.length} fechas:`, fechas);
 
       if (fechas.length === 0) return [];
 
+      // Consultar precios para los productos en las fechas seleccionadas
       const { data, error } = await supabase
         .from('fruver_data')
         .select('fecha_inicio,producto,precio_medio')
         .in('producto', productosLower)
         .in('fecha_inicio', fechas)
-        .limit(200000);
+        .limit(500000);
+
       if (error) throw error;
 
       const rows = (data ?? []) as Array<{ fecha_inicio: string; producto: string; precio_medio: number }>;
+      console.log(`[FruverData] Filas cargadas para serie canasta: ${rows.length}`);
+
       const byFecha = groupBy(rows, (r) => r.fecha_inicio);
 
-      return fechas.map((fecha) => {
+      const serie = fechas.map((fecha) => {
         const rowsFecha = byFecha[fecha] ?? [];
         const byProd = groupBy(rowsFecha, (r) => r.producto);
         let total = 0;
@@ -437,6 +469,9 @@ export class FruverDataService {
         }
         return { label: fecha, value: Math.round(total) };
       });
+
+      // Filtrar puntos con valor 0 (no hay datos para esa fecha)
+      return serie.filter((p) => p.value > 0);
     });
   }
 

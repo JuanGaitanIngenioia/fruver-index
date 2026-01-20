@@ -1,8 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-
-import { Chart, type ChartConfiguration } from 'chart.js/auto';
 
 import type { CatalogoBasicoItem } from '../../services/fruver-data.service';
 import { FruverDataService } from '../../services/fruver-data.service';
@@ -14,7 +12,7 @@ import { FruverDataService } from '../../services/fruver-data.service';
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'
 })
-export class HomeComponent implements AfterViewInit, OnDestroy {
+export class HomeComponent {
   private readonly router = inject(Router);
   private readonly fruver = inject(FruverDataService);
 
@@ -45,17 +43,11 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
 
   readonly searchQuery = signal('');
   readonly showSuggestions = signal(false);
+  readonly searchNotFound = signal<string | null>(null);
 
   readonly canastaLoading = signal(true);
   readonly canastaError = signal<string | null>(null);
   readonly canastaValor = signal<number>(0);
-  // Info interna (no se muestra en UI)
-  readonly canastaInfo = signal<{ fechaInicio: string } | null>(null);
-
-  readonly canastaBarras = signal<{ labels: string[]; values: number[] } | null>(null);
-
-  @ViewChild('canastaChart', { static: false }) canastaChart?: ElementRef<HTMLCanvasElement>;
-  private chart?: Chart;
 
   readonly sugerencias = computed(() => {
     const query = this.searchQuery().toLowerCase().trim();
@@ -90,17 +82,6 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     try {
       const resultado = await this.fruver.getCanastaActual(this.productosCanasta());
       this.canastaValor.set(resultado.valorTotal);
-      this.canastaInfo.set({ fechaInicio: resultado.fechaInicio });
-
-      // Depurar lista: quitar productos que no existen en BD (reduce ruido y evita “faltantes”)
-      if (resultado.productosUsados.length > 0) {
-        this.productosCanasta.set(resultado.productosUsados);
-      }
-
-      // Serie real: últimas ~13 semanas (≈3 meses)
-      const barras = await this.fruver.getCanastaBarrasTresMeses(this.productosCanasta());
-      this.canastaBarras.set({ labels: barras.labels, values: barras.values });
-      setTimeout(() => this.renderCanastaChart(), 0);
     } catch (e) {
       this.canastaError.set(e instanceof Error ? e.message : 'No se pudo cargar la canasta.');
     } finally {
@@ -108,85 +89,22 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private renderCanastaChart(): void {
-    const canvas = this.canastaChart?.nativeElement;
-    if (!canvas || !this.canastaBarras()) return;
-
-    const labels = this.canastaBarras()!.labels;
-    const values = this.canastaBarras()!.values;
-
-    const config: ChartConfiguration<'bar'> = {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Valor de la canasta familiar',
-            data: values,
-            backgroundColor: ['rgba(45, 90, 39, 0.75)', 'rgba(45, 90, 39, 0.45)', 'rgba(45, 90, 39, 0.28)'],
-            borderColor: ['#2D5A27', '#2D5A27', '#2D5A27'],
-            borderWidth: 1,
-            borderRadius: 8,
-            maxBarThickness: 72
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: (ctx) => `Valor: $ ${Number(ctx.raw ?? 0).toLocaleString('es-CO')}`
-            },
-            displayColors: false,
-            backgroundColor: 'rgba(26, 26, 26, 0.9)',
-            titleColor: '#fff',
-            bodyColor: '#fff',
-            borderColor: '#2D5A27',
-            borderWidth: 1,
-            padding: 12
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: false,
-            ticks: {
-              callback: (v) => `$ ${Number(v).toLocaleString('es-CO')}`
-            }
-          },
-          x: {
-            grid: { display: false }
-          }
-        }
-      }
-    };
-
-    this.chart?.destroy();
-    this.chart = new Chart(canvas, config);
-  }
-
-  ngAfterViewInit(): void {
-    // Si ya tenemos datos, renderizar el gráfico
-    if (this.canastaBarras()) {
-      this.renderCanastaChart();
-    }
-  }
-
-  ngOnDestroy(): void {
-    this.chart?.destroy();
-  }
-
   onSearchInput(value: string): void {
     this.searchQuery.set(value);
     this.showSuggestions.set(value.trim().length >= 2);
+    this.searchNotFound.set(null);
   }
 
   buscar(raw: string): void {
     const producto = (raw ?? '').toLowerCase().trim();
     if (!producto) return;
     this.showSuggestions.set(false);
+    // Validar si existe en el catálogo antes de navegar
+    const exists = this.productos().some((p) => p.producto.toLowerCase() === producto);
+    if (!exists) {
+      this.searchNotFound.set(`No encontramos "${raw}". Revisa el nombre o prueba con otra búsqueda.`);
+      return;
+    }
     this.router.navigate(['/producto', producto]);
   }
 

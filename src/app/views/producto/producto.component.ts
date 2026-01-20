@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, ElementRef, ViewChild, computed, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, ElementRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { Chart, type ChartConfiguration } from 'chart.js/auto';
@@ -18,7 +18,7 @@ import { groupBy, median } from '../../utils/stats';
   templateUrl: './producto.component.html',
   styleUrl: './producto.component.scss'
 })
-export class ProductoComponent {
+export class ProductoComponent implements AfterViewInit {
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -164,6 +164,9 @@ export class ProductoComponent {
       this.periodoActual.set(actual);
       this.periodoAnterior.set(anterior);
 
+      // Importante: el canvas del chart solo existe cuando loading() es false.
+      // Si intentamos renderizar mientras loading=true, renderChart() no encuentra el canvas.
+      this.loading.set(false);
       await this.loadSerieAndRecalc();
     } catch (e) {
       this.error.set(e instanceof Error ? e.message : 'Error cargando datos.');
@@ -307,6 +310,13 @@ export class ProductoComponent {
 
     this.chart?.destroy();
     this.chart = new Chart(canvas, config);
+  }
+
+  ngAfterViewInit(): void {
+    // Si la serie ya cargó antes de que el canvas existiera, renderizar ahora.
+    if (this.serie().length > 0) {
+      this.renderChart();
+    }
   }
 
   ngOnDestroy(): void {

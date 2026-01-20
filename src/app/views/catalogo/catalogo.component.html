@@ -4,7 +4,6 @@
       <p class="eyebrow">Catalogo de productos</p>
       <h2>Navegacion rapida por categorias</h2>
     </div>
-    <button class="btn btn-secondary">Ver todos</button>
   </div>
   @if (error()) {
     <div class="card">
@@ -15,6 +14,34 @@
     <div class="catalog-layout">
       <aside class="filters card">
         <h3>Filtros laterales</h3>
+        <div class="filter-group">
+          <label class="field-label" for="catalogo-search">Buscar</label>
+          <input
+            id="catalogo-search"
+            type="search"
+            placeholder="Ej. Tomate chonto"
+            [value]="search()"
+            (input)="setSearch($any($event.target).value)"
+          />
+        </div>
+        <div class="filter-group">
+          <label class="field-label" for="catalogo-sort">Ordenar por</label>
+          <select id="catalogo-sort" [value]="sort()" (change)="setSort($any($event.target).value)">
+            <option value="name">Nombre (A-Z)</option>
+            <option value="price">Precio (menor a mayor)</option>
+            <option value="trend_up">Tendencia (más subió)</option>
+            <option value="trend_down">Tendencia (más bajó)</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="field-label" for="catalogo-trend">Filtrar tendencia</label>
+          <select id="catalogo-trend" [value]="trendFilter()" (change)="setTrendFilter($any($event.target).value)">
+            <option value="all">Todas</option>
+            <option value="up">Subió</option>
+            <option value="down">Bajó</option>
+            <option value="neutral">Estable</option>
+          </select>
+        </div>
         <div class="filter-group">
           <p class="filter-title">Categorias</p>
           @for (category of categories(); track category) {

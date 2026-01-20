@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 
 import type { CatalogoBasicoItem, CatalogoItem } from '../../services/fruver-data.service';
 import { FruverDataService } from '../../services/fruver-data.service';
@@ -23,6 +23,9 @@ export class CatalogoComponent {
   // En catálogo usamos la data liviana. Para no reescribir el template, la mapeamos a CatalogoItem “completa” con valores nulos.
   readonly items = signal<CatalogoItem[]>([]);
   readonly selectedCategories = signal<Set<string>>(new Set());
+  readonly search = signal('');
+  readonly trendFilter = signal<'all' | 'up' | 'down' | 'neutral'>('all');
+  readonly sort = signal<'name' | 'price' | 'trend_up' | 'trend_down'>('name');
 
   readonly categories = computed(() => {
     const cats = Array.from(new Set(this.items().map((i) => i.grupo_alimentos))).filter(Boolean);
@@ -31,9 +34,46 @@ export class CatalogoComponent {
 
   readonly filteredItems = computed(() => {
     const selected = this.selectedCategories();
-    const items = this.items();
-    if (selected.size === 0) return items;
-    return items.filter((i) => selected.has(i.grupo_alimentos));
+    const query = this.search().toLowerCase().trim();
+    const trend = this.trendFilter();
+    const sort = this.sort();
+
+    let out = this.items();
+    if (selected.size > 0) out = out.filter((i) => selected.has(i.grupo_alimentos));
+    if (query) out = out.filter((i) => i.producto.toLowerCase().includes(query));
+
+    if (trend !== 'all') {
+      out = out.filter((i) => this.trendFor(i) === trend);
+    }
+
+    // Sorting
+    const scoreFor = (i: CatalogoItem): number => {
+      const c = i.cambioPct;
+      return c !== null && Number.isFinite(c) ? c : Number.NaN;
+    };
+
+    out = [...out].sort((a, b) => {
+      if (sort === 'name') return a.producto.localeCompare(b.producto);
+      if (sort === 'price') return a.precioActual - b.precioActual;
+      if (sort === 'trend_up') {
+        const sa = scoreFor(a);
+        const sb = scoreFor(b);
+        // nulls/NaN to bottom
+        if (!Number.isFinite(sa) && !Number.isFinite(sb)) return a.producto.localeCompare(b.producto);
+        if (!Number.isFinite(sa)) return 1;
+        if (!Number.isFinite(sb)) return -1;
+        return sb - sa || a.producto.localeCompare(b.producto);
+      }
+      // trend_down
+      const sa = scoreFor(a);
+      const sb = scoreFor(b);
+      if (!Number.isFinite(sa) && !Number.isFinite(sb)) return a.producto.localeCompare(b.producto);
+      if (!Number.isFinite(sa)) return 1;
+      if (!Number.isFinite(sb)) return -1;
+      return sa - sb || a.producto.localeCompare(b.producto);
+    });
+
+    return out;
   });
 
   readonly page = signal(1);
@@ -137,6 +177,25 @@ export class CatalogoComponent {
     this.selectedCategories.set(next);
     // Reset to page 1 when filters change
     this.page.set(1);
+  }
+
+  setSearch(value: string): void {
+    this.search.set(value);
+    this.page.set(1);
+  }
+
+  setTrendFilter(value: string): void {
+    if (value === 'up' || value === 'down' || value === 'neutral' || value === 'all') {
+      this.trendFilter.set(value);
+      this.page.set(1);
+    }
+  }
+
+  setSort(value: string): void {
+    if (value === 'name' || value === 'price' || value === 'trend_up' || value === 'trend_down') {
+      this.sort.set(value);
+      this.page.set(1);
+    }
   }
 
   iconFor(category: string): string {

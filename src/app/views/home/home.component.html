@@ -36,6 +36,9 @@
             </ul>
           }
         </div>
+        @if (searchNotFound()) {
+          <p class="muted" aria-live="polite">{{ searchNotFound() }}</p>
+        }
         @if (loading()) {
           <p class="muted">Cargando productos…</p>
         } @else if (productos().length > 0) {
@@ -53,23 +56,6 @@
         } @else {
           <p class="canasta-value">$ {{ canastaValor().toLocaleString('es-CO') }}</p>
         }
-      </div>
-      <div class="card chart-card">
-        <div class="card-header">
-          <div>
-            <h3>Evolución de la canasta familiar</h3>
-            <p class="muted">Actual vs Anterior vs Hace dos meses</p>
-          </div>
-        </div>
-        <div class="chart-area" aria-label="Gráfico de áreas de canasta familiar">
-          @if (canastaLoading()) {
-            <div class="chart-loading">
-              <p class="muted">Cargando gráfico…</p>
-            </div>
-          } @else {
-            <canvas #canastaChart></canvas>
-          }
-        </div>
       </div>
     </div>
   </div>
