@@ -1,22 +1,21 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import type { CatalogoBasicoItem, CatalogoItem } from '../../services/fruver-data.service';
 import { FruverDataService } from '../../services/fruver-data.service';
 
+type PaginationItem = { kind: 'page'; value: number } | { kind: 'ellipsis' };
+
 @Component({
   selector: 'app-catalogo',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './catalogo.component.html',
   styleUrl: './catalogo.component.scss'
 })
 export class CatalogoComponent {
-  private readonly router = inject(Router);
   private readonly fruver = inject(FruverDataService);
-
-  readonly quickFilters = ['Organico', 'En oferta', 'De temporada', 'Local'];
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
@@ -36,6 +35,70 @@ export class CatalogoComponent {
     if (selected.size === 0) return items;
     return items.filter((i) => selected.has(i.grupo_alimentos));
   });
+
+  readonly page = signal(1);
+  readonly pageSize = 10;
+
+  readonly pageCount = computed(() => {
+    return Math.ceil(this.filteredItems().length / this.pageSize);
+  });
+
+  readonly pagedItems = computed(() => {
+    const filtered = this.filteredItems();
+    const currentPage = this.page();
+    const start = (currentPage - 1) * this.pageSize;
+    const end = start + this.pageSize;
+    return filtered.slice(start, end);
+  });
+
+  setPage(newPage: number): void {
+    if (newPage >= 1 && newPage <= this.pageCount()) {
+      this.page.set(newPage);
+      // Scroll to top of product grid
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  getPaginationItems(): PaginationItem[] {
+    const total = this.pageCount();
+    const current = this.page();
+    const items: PaginationItem[] = [];
+
+    if (total <= 7) {
+      // Show all pages if 7 or fewer
+      for (let i = 1; i <= total; i++) {
+        items.push({ kind: 'page', value: i });
+      }
+    } else {
+      // Always show first page
+      items.push({ kind: 'page', value: 1 });
+
+      if (current <= 3) {
+        // Near the start
+        for (let i = 2; i <= 4; i++) {
+          items.push({ kind: 'page', value: i });
+        }
+        items.push({ kind: 'ellipsis' });
+        items.push({ kind: 'page', value: total });
+      } else if (current >= total - 2) {
+        // Near the end
+        items.push({ kind: 'ellipsis' });
+        for (let i = total - 3; i <= total; i++) {
+          items.push({ kind: 'page', value: i });
+        }
+      } else {
+        // In the middle
+        items.push({ kind: 'ellipsis' });
+        for (let i = current - 1; i <= current + 1; i++) {
+          items.push({ kind: 'page', value: i });
+        }
+        items.push({ kind: 'ellipsis' });
+        items.push({ kind: 'page', value: total });
+      }
+    }
+
+    return items;
+  }
 
   constructor() {
     void this.load();
@@ -72,6 +135,8 @@ export class CatalogoComponent {
     if (checked) next.add(category);
     else next.delete(category);
     this.selectedCategories.set(next);
+    // Reset to page 1 when filters change
+    this.page.set(1);
   }
 
   iconFor(category: string): string {
@@ -130,9 +195,4 @@ export class CatalogoComponent {
     return '=';
   }
 
-  navigateToProducto(productName: string): void {
-    const producto = (productName ?? '').toLowerCase().trim();
-    if (!producto) return;
-    this.router.navigate(['/producto', producto]);
-  }
 }

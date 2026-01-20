@@ -258,19 +258,41 @@ export class ProductoComponent {
             borderColor: '#F28C28',
             backgroundColor: 'rgba(242, 140, 40, 0.12)',
             tension: 0.25,
-            pointRadius: 2
+            pointRadius: 2,
+            pointHoverRadius: 6,
+            pointHitRadius: 10,
+            fill: true
           }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+          mode: 'nearest',
+          axis: 'x',
+          intersect: false
+        },
         plugins: {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: (ctx) => `$ ${Number(ctx.raw ?? 0).toLocaleString('es-CO')}`
-            }
+              title: (items) => {
+                if (items.length > 0) {
+                  const index = items[0].dataIndex;
+                  return labels[index] || '';
+                }
+                return '';
+              },
+              label: (ctx) => `Precio: $ ${Number(ctx.raw ?? 0).toLocaleString('es-CO')}`
+            },
+            displayColors: false,
+            backgroundColor: 'rgba(26, 26, 26, 0.9)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            borderColor: '#F28C28',
+            borderWidth: 1,
+            padding: 12
           }
         },
         scales: {

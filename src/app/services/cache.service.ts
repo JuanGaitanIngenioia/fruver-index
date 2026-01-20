@@ -48,7 +48,7 @@ export class CacheService {
 
       // Si han pasado más de 1 hora desde la última visita, limpiar
       if (now - timestamp > ONE_HOUR) {
-        console.log('[Cache] Cache expirado (> 1 hora desde última visita). Limpiando...');
+        // Silencioso por defecto (evitar ruido en consola)
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(STORAGE_TIMESTAMP_KEY);
         return;
@@ -67,11 +67,7 @@ export class CacheService {
         }
       }
 
-      if (restored > 0) {
-        console.log(`[Cache] Restaurados ${restored} items desde localStorage.`);
-        // Considerar esto como “visita”
-        this.touch();
-      }
+      if (restored > 0) this.touch();
     } catch (e) {
       console.warn('[Cache] Error leyendo localStorage:', e);
     }
@@ -129,7 +125,6 @@ export class CacheService {
 
     if (existing) {
       if (existing.value !== undefined && now <= existing.expiresAt) {
-        console.log(`[Cache] Hit: ${key}`);
         this.touch();
         return Promise.resolve(existing.value);
       }
@@ -139,8 +134,6 @@ export class CacheService {
         return existing.inFlight;
       }
     }
-
-    console.log(`[Cache] Miss: ${key} - cargando desde BD...`);
 
     const inFlight = loader()
       .then((value) => {

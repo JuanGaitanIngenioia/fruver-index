@@ -44,37 +44,31 @@
       </div>
     </div>
     <div class="hero-visual">
+      <div class="card canasta-kpi-card">
+        <h3>Valor actual de la canasta familiar</h3>
+        @if (canastaLoading()) {
+          <p class="muted">Calculando…</p>
+        } @else if (canastaError()) {
+          <p class="muted">{{ canastaError() }}</p>
+        } @else {
+          <p class="canasta-value">$ {{ canastaValor().toLocaleString('es-CO') }}</p>
+        }
+      </div>
       <div class="card chart-card">
         <div class="card-header">
           <div>
-            <h3>Valor de la canasta familiar</h3>
-            <p class="muted">Ultimos 12 meses · Visualización base</p>
+            <h3>Evolución de la canasta familiar</h3>
+            <p class="muted">Actual vs Anterior vs Hace dos meses</p>
           </div>
-          <span class="tag">+4.2% anual</span>
         </div>
-        <div class="chart-area" aria-label="Grafico de areas de canasta familiar">
-          <svg viewBox="0 0 560 200" aria-hidden="true">
-            <defs>
-              <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#2D5A27" stop-opacity="0.45"></stop>
-                <stop offset="100%" stop-color="#2D5A27" stop-opacity="0"></stop>
-              </linearGradient>
-            </defs>
-            <path
-              d="M0 150 L60 130 L120 140 L180 110 L240 120 L300 90 L360 100 L420 70 L480 80 L540 60 L560 65 L560 200 L0 200 Z"
-              fill="url(#areaFill)"
-            ></path>
-            <path
-              d="M0 150 L60 130 L120 140 L180 110 L240 120 L300 90 L360 100 L420 70 L480 80 L540 60 L560 65"
-              fill="none"
-              stroke="#2D5A27"
-              stroke-width="3"
-            ></path>
-          </svg>
-          <div class="chart-legend">
-            <span>Promedio mensual: $ 312.500</span>
-            <span>Maximo: $ 345.200</span>
-          </div>
+        <div class="chart-area" aria-label="Gráfico de áreas de canasta familiar">
+          @if (canastaLoading()) {
+            <div class="chart-loading">
+              <p class="muted">Cargando gráfico…</p>
+            </div>
+          } @else {
+            <canvas #canastaChart></canvas>
+          }
         </div>
       </div>
     </div>

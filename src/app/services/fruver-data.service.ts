@@ -43,6 +43,43 @@ const PAGE_SIZE = 5000;
 export class FruverDataService {
   constructor(private readonly cache: CacheService) {}
 
+  private parseISODate(iso: string): Date | null {
+    // iso expected: YYYY-MM-DD
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+    if (!m) return null;
+    const year = Number(m[1]);
+    const month = Number(m[2]) - 1;
+    const day = Number(m[3]);
+    const dt = new Date(Date.UTC(year, month, day));
+    return Number.isFinite(dt.getTime()) ? dt : null;
+  }
+
+  private formatISODateUTC(dt: Date): string {
+    const y = dt.getUTCFullYear();
+    const m = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(dt.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  private async canastaTotalEnFecha(productosLower: string[], fechaInicio: string): Promise<number> {
+    const { data, error } = await supabase
+      .from('fruver_data')
+      .select('producto,precio_medio')
+      .in('producto', productosLower)
+      .eq('fecha_inicio', fechaInicio)
+      .limit(50000);
+    if (error) throw error;
+    const rows = (data ?? []) as Array<{ producto: string; precio_medio: number }>;
+    const byProd = groupBy(rows, (r) => r.producto);
+    let total = 0;
+    for (const prod of productosLower) {
+      const valores = (byProd[prod] ?? []).map((r) => r.precio_medio).filter((n) => Number.isFinite(n) && n > 0);
+      if (valores.length === 0) continue;
+      total += median(valores);
+    }
+    return Math.round(total);
+  }
+
   private async fetchAll<T>(
     loader: (from: number, to: number) => Promise<T[]>
   ): Promise<T[]> {
@@ -296,6 +333,179 @@ export class FruverDataService {
       });
 
       return rows;
+    });
+  }
+
+  /**
+   * Calcula el valor actual de la canasta familiar sumando los precios de los productos especificados.
+   * Omite productos que no existen en la BD.
+   */
+  async getCanastaActual(productosCanasta: string[]): Promise<{
+    valorTotal: number;
+    productosEncontrados: number;
+    productosUsados: string[];
+    fechaInicio: string;
+  }> {
+    // Key corta para evitar ruido/strings enormes en cache/logs
+    const key = `canasta:actual`;
+    return this.cache.cached(key, TTL_1H, async () => {
+      const fechaActual = await this.getFechaGlobalActual();
+      if (!fechaActual) {
+        return { valorTotal: 0, productosEncontrados: 0, productosUsados: [], fechaInicio: '' };
+      }
+
+      const productosLower = productosCanasta.map((p) => p.toLowerCase().trim());
+      const precios: number[] = [];
+      const usados: string[] = [];
+
+      // Consultar en bloque para reducir llamadas
+      const { data, error } = await supabase
+        .from('fruver_data')
+        .select('producto,precio_medio')
+        .in('producto', productosLower)
+        .eq('fecha_inicio', fechaActual)
+        .limit(50000);
+
+      if (error) throw error;
+      const rows = (data ?? []) as Array<{ producto: string; precio_medio: number }>;
+
+      const byProducto = groupBy(rows, (r) => r.producto);
+      for (const producto of productosLower) {
+        const preciosProducto = (byProducto[producto] ?? [])
+          .map((r) => r.precio_medio)
+          .filter((p) => Number.isFinite(p) && p > 0);
+        if (preciosProducto.length === 0) continue;
+        usados.push(producto);
+        precios.push(median(preciosProducto));
+      }
+
+      const valorTotal = precios.reduce((sum, precio) => sum + precio, 0);
+
+      return {
+        valorTotal,
+        productosEncontrados: precios.length,
+        productosUsados: usados,
+        fechaInicio: fechaActual
+      };
+    });
+  }
+
+  /**
+   * Serie semanal real de la canasta (suma de medianas por producto) para las últimas ~13 semanas.
+   */
+  async getCanastaSerieUltimasSemanas(productosCanasta: string[], semanas = 13): Promise<SeriePoint[]> {
+    const key = `canasta:serie:${semanas}`;
+    return this.cache.cached(key, TTL_1H, async () => {
+      const productosLower = productosCanasta.map((p) => p.toLowerCase().trim()).filter(Boolean);
+      if (productosLower.length === 0) return [];
+
+      // Tomar las últimas N fechas globales disponibles (aprox)
+      const { data: fechasData, error: fechasError } = await supabase
+        .from('fruver_data')
+        .select('fecha_inicio')
+        .order('fecha_inicio', { ascending: false })
+        .limit(2000);
+      if (fechasError) throw fechasError;
+
+      const fechas = Array.from(
+        new Set(((fechasData ?? []) as Array<{ fecha_inicio: string }>).map((r) => r.fecha_inicio).filter(Boolean))
+      )
+        .sort((a, b) => a.localeCompare(b))
+        .slice(-semanas);
+
+      if (fechas.length === 0) return [];
+
+      const { data, error } = await supabase
+        .from('fruver_data')
+        .select('fecha_inicio,producto,precio_medio')
+        .in('producto', productosLower)
+        .in('fecha_inicio', fechas)
+        .limit(200000);
+      if (error) throw error;
+
+      const rows = (data ?? []) as Array<{ fecha_inicio: string; producto: string; precio_medio: number }>;
+      const byFecha = groupBy(rows, (r) => r.fecha_inicio);
+
+      return fechas.map((fecha) => {
+        const rowsFecha = byFecha[fecha] ?? [];
+        const byProd = groupBy(rowsFecha, (r) => r.producto);
+        let total = 0;
+        for (const prod of productosLower) {
+          const valores = (byProd[prod] ?? []).map((r) => r.precio_medio).filter((n) => Number.isFinite(n) && n > 0);
+          if (valores.length === 0) continue;
+          total += median(valores);
+        }
+        return { label: fecha, value: Math.round(total) };
+      });
+    });
+  }
+
+  /**
+   * Totales de canasta para 3 barras: Actual, Anterior, Hace dos meses.
+   * Se calcula usando el último corte disponible de cada mes.
+   */
+  async getCanastaBarrasTresMeses(productosCanasta: string[]): Promise<{
+    labels: ['Actual', 'Anterior', 'Hace dos meses'];
+    values: [number, number, number];
+    fechas: [string | null, string | null, string | null];
+  }> {
+    const key = 'canasta:barras:3m';
+    return this.cache.cached(key, TTL_1H, async () => {
+      const productosLower = productosCanasta.map((p) => p.toLowerCase().trim()).filter(Boolean);
+      if (productosLower.length === 0) {
+        return { labels: ['Actual', 'Anterior', 'Hace dos meses'], values: [0, 0, 0], fechas: [null, null, null] };
+      }
+
+      // Traer fechas globales (distinct) y quedarnos con las más recientes por mes
+      const { data: fechasData, error: fechasError } = await supabase
+        .from('fruver_data')
+        .select('fecha_inicio')
+        .order('fecha_inicio', { ascending: false })
+        .limit(2500);
+      if (fechasError) throw fechasError;
+
+      const fechas = Array.from(
+        new Set(((fechasData ?? []) as Array<{ fecha_inicio: string }>).map((r) => r.fecha_inicio).filter(Boolean))
+      ).sort((a, b) => a.localeCompare(b));
+      if (fechas.length === 0) {
+        return { labels: ['Actual', 'Anterior', 'Hace dos meses'], values: [0, 0, 0], fechas: [null, null, null] };
+      }
+
+      // Tomar el último día disponible como "Actual"
+      const actualFecha = fechas[fechas.length - 1];
+      const actualDt = this.parseISODate(actualFecha);
+      if (!actualDt) {
+        return { labels: ['Actual', 'Anterior', 'Hace dos meses'], values: [0, 0, 0], fechas: [actualFecha, null, null] };
+      }
+
+      // Helper: último corte disponible para un mes dado (YYYY-MM)
+      const lastCorteForYearMonth = (ym: string): string | null => {
+        // fechas está ordenado ascendente; buscamos desde el final
+        for (let i = fechas.length - 1; i >= 0; i--) {
+          const f = fechas[i];
+          if (f.startsWith(ym)) return f;
+        }
+        return null;
+      };
+
+      const ymActual = actualFecha.slice(0, 7);
+      const dtAnterior = new Date(Date.UTC(actualDt.getUTCFullYear(), actualDt.getUTCMonth() - 1, 1));
+      const dtHaceDos = new Date(Date.UTC(actualDt.getUTCFullYear(), actualDt.getUTCMonth() - 2, 1));
+      const ymAnterior = `${dtAnterior.getUTCFullYear()}-${String(dtAnterior.getUTCMonth() + 1).padStart(2, '0')}`;
+      const ymHaceDos = `${dtHaceDos.getUTCFullYear()}-${String(dtHaceDos.getUTCMonth() + 1).padStart(2, '0')}`;
+
+      const fechaAnterior = lastCorteForYearMonth(ymAnterior);
+      const fechaHaceDos = lastCorteForYearMonth(ymHaceDos);
+
+      const actual = await this.canastaTotalEnFecha(productosLower, actualFecha);
+      const anterior = fechaAnterior ? await this.canastaTotalEnFecha(productosLower, fechaAnterior) : 0;
+      const haceDos = fechaHaceDos ? await this.canastaTotalEnFecha(productosLower, fechaHaceDos) : 0;
+
+      return {
+        labels: ['Actual', 'Anterior', 'Hace dos meses'],
+        values: [actual, anterior, haceDos],
+        fechas: [actualFecha, fechaAnterior, fechaHaceDos]
+      };
     });
   }
 }

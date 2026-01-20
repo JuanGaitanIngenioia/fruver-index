@@ -28,42 +28,90 @@
             </label>
           }
         </div>
-        <div class="filter-group">
-          <p class="filter-title">Sugerencias</p>
-          <div class="chip-row">
-            @for (chip of quickFilters; track chip) {
-              <span class="chip">{{ chip }}</span>
-            }
-          </div>
-        </div>
       </aside>
 
-      <div class="product-grid">
+      <div class="product-section">
         @if (loading()) {
           <div class="card">
             <p class="muted">Cargando productos…</p>
           </div>
         } @else {
-          @for (item of filteredItems(); track item.producto) {
-            <article class="card product-card" (click)="navigateToProducto(item.producto)" style="cursor: pointer;">
-              <div class="product-icon" aria-hidden="true">
-                <span>{{ iconFor(item.grupo_alimentos) }}</span>
+          <div class="product-results-header">
+            <p class="muted">{{ filteredItems().length }} producto{{ filteredItems().length !== 1 ? 's' : '' }} encontrado{{ filteredItems().length !== 1 ? 's' : '' }}</p>
+          </div>
+          <div class="product-grid">
+            @for (item of pagedItems(); track item.producto) {
+              <article class="card product-card">
+                <a
+                  [routerLink]="['/producto', item.producto.toLowerCase()]"
+                  class="product-link"
+                  [attr.aria-label]="'Ver detalles de ' + item.producto"
+                >
+                  <div class="product-icon" aria-hidden="true">
+                    <span>{{ iconFor(item.grupo_alimentos) }}</span>
+                  </div>
+                  <div class="product-body">
+                    <div class="product-title">
+                      <h4>{{ item.producto }}</h4>
+                      <span class="tag">{{ item.grupo_alimentos }}</span>
+                    </div>
+                    <p class="price">$ {{ item.precioActual.toLocaleString('es-CO') }} / kg</p>
+                    <p
+                      class="trend"
+                      [class.up]="trendFor(item) === 'up'"
+                      [class.down]="trendFor(item) === 'down'"
+                      [class.neutral]="trendFor(item) === 'neutral'"
+                      [attr.aria-label]="'Tendencia: ' + trendText(item) + (changeLabel(item) ? ' ' + changeLabel(item) : '')"
+                    >
+                      <span class="trend-icon" aria-hidden="true">{{ trendIcon(item) }}</span>
+                      {{ trendText(item) }} {{ changeLabel(item) }}
+                    </p>
+                  </div>
+                </a>
+              </article>
+            }
+            @if (pagedItems().length === 0) {
+              <div class="card">
+                <p class="muted">No se encontraron productos con los filtros seleccionados.</p>
               </div>
-              <div class="product-body">
-                <div class="product-title">
-                  <h4>{{ item.producto }}</h4>
-                  <span class="tag">{{ item.grupo_alimentos }}</span>
-                </div>
-                <p class="price">$ {{ item.precioActual.toLocaleString('es-CO') }} / kg</p>
-                <p class="trend" [class.up]="trendFor(item) === 'up'" [class.down]="trendFor(item) === 'down'" [class.neutral]="trendFor(item) === 'neutral'">
-                  <span class="trend-icon">{{ trendIcon(item) }}</span>
-                  {{ trendText(item) }} {{ changeLabel(item) }}
-                </p>
-                <button class="btn btn-primary btn-sm" (click)="navigateToProducto(item.producto); $event.stopPropagation()">
-                  Ver detalle
-                </button>
+            }
+          </div>
+          @if (pageCount() > 1) {
+            <nav class="pagination" aria-label="Paginación de productos">
+              <button
+                class="btn btn-secondary btn-sm"
+                [disabled]="page() === 1"
+                (click)="setPage(page() - 1)"
+                aria-label="Página anterior"
+              >
+                Anterior
+              </button>
+              <div class="pagination-numbers">
+                @for (p of getPaginationItems(); track $index) {
+                  @if (p.kind === 'ellipsis') {
+                    <span class="pagination-ellipsis">...</span>
+                  } @else {
+                    <button
+                      class="btn btn-secondary btn-sm pagination-number"
+                      [class.active]="page() === p.value"
+                      [attr.aria-current]="page() === p.value ? 'page' : null"
+                      (click)="setPage(p.value)"
+                      [attr.aria-label]="'Ir a página ' + p.value"
+                    >
+                      {{ p.value }}
+                    </button>
+                  }
+                }
               </div>
-            </article>
+              <button
+                class="btn btn-secondary btn-sm"
+                [disabled]="page() === pageCount()"
+                (click)="setPage(page() + 1)"
+                aria-label="Página siguiente"
+              >
+                Siguiente
+              </button>
+            </nav>
           }
         }
       </div>
