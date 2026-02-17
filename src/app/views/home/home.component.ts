@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { afterNextRender, Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
+import { gsap } from 'gsap';
 
 import type { CatalogoBasicoItem } from '../../services/fruver-data.service';
 import { FruverDataService } from '../../services/fruver-data.service';
@@ -10,11 +11,13 @@ import { FruverDataService } from '../../services/fruver-data.service';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './home.component.html',
-  styleUrl: './home.component.scss'
+  styleUrl: './home.component.scss',
 })
 export class HomeComponent {
   private readonly router = inject(Router);
   private readonly fruver = inject(FruverDataService);
+  private readonly sectionRef = viewChild<ElementRef<HTMLElement>>('sectionRef');
+  private tl: gsap.core.Timeline | null = null;
 
   // Lista base de productos de la canasta familiar (se depura automáticamente con los que existan en BD)
   private readonly productosCanasta = signal<string[]>([
@@ -61,6 +64,29 @@ export class HomeComponent {
   constructor() {
     void this.load();
     void this.loadCanasta();
+
+    afterNextRender(() => {
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const section = this.sectionRef()?.nativeElement;
+      if (!section) return;
+
+      if (prefersReduced) {
+        gsap.set(section.querySelectorAll('.hero-text > *, .hero-visual > *'), { opacity: 1, y: 0 });
+        return;
+      }
+
+      this.tl = gsap.timeline({ defaults: { ease: 'power2.out' } });
+      this.tl
+        .from(section.querySelector('.eyebrow'), { opacity: 0, y: 16, duration: 0.4 })
+        .from(section.querySelector('h1'), { opacity: 0, y: 20, duration: 0.5 }, '-=0.2')
+        .from(section.querySelector('.lead'), { opacity: 0, y: 16, duration: 0.4 }, '-=0.2')
+        .from(section.querySelector('.search-card'), { opacity: 0, y: 20, scale: 0.98, duration: 0.4 }, '-=0.2')
+        .from(section.querySelectorAll('.hero-visual > *'), { opacity: 0, x: 24, stagger: 0.12, duration: 0.45 }, '-=0.3');
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.tl?.kill();
   }
 
   private async load(): Promise<void> {

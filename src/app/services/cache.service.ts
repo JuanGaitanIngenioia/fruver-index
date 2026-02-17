@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 
 type CacheEntry<T> = {
   expiresAt: number;
@@ -19,12 +20,18 @@ const ONE_HOUR = 60 * 60 * 1000;
 export class CacheService {
   private readonly store = new Map<string, CacheEntry<unknown>>();
   private initialized = false;
+  private readonly platformId = inject(PLATFORM_ID);
+
+  private get isBrowser(): boolean {
+    return isPlatformBrowser(this.platformId);
+  }
 
   constructor() {
     this.loadFromStorage();
   }
 
   private touch(): void {
+    if (!this.isBrowser) return;
     try {
       localStorage.setItem(STORAGE_TIMESTAMP_KEY, Date.now().toString());
     } catch {
@@ -38,6 +45,8 @@ export class CacheService {
   private loadFromStorage(): void {
     if (this.initialized) return;
     this.initialized = true;
+
+    if (!this.isBrowser) return;
 
     try {
       const timestampStr = localStorage.getItem(STORAGE_TIMESTAMP_KEY);
@@ -77,6 +86,7 @@ export class CacheService {
    * Guarda el cache en localStorage y actualiza el timestamp.
    */
   private saveToStorage(): void {
+    if (!this.isBrowser) return;
     try {
       const toStore: Record<string, StoredCache> = {};
       const now = Date.now();
@@ -159,8 +169,10 @@ export class CacheService {
 
   clear(): void {
     this.store.clear();
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(STORAGE_TIMESTAMP_KEY);
+    if (this.isBrowser) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_TIMESTAMP_KEY);
+    }
     console.log('[Cache] Cache limpiado completamente.');
   }
 }

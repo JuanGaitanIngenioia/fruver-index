@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, DestroyRef, ElementRef, ViewChild, computed, inject, signal } from '@angular/core';
+import { afterNextRender, AfterViewInit, Component, DestroyRef, ElementRef, ViewChild, computed, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { gsap } from 'gsap';
 
 import { Chart, type ChartConfiguration } from 'chart.js/auto';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -127,12 +128,31 @@ export class ProductoComponent implements AfterViewInit {
 
   @ViewChild('chartCanvas', { static: false }) chartCanvas?: ElementRef<HTMLCanvasElement>;
   private chart?: Chart;
+  private readonly sectionRef = viewChild<ElementRef<HTMLElement>>('sectionRef');
+  private gsapTl: gsap.core.Timeline | null = null;
 
   constructor() {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const producto = (params.get('producto') ?? '').toLowerCase().trim();
       this.producto.set(producto);
       this.reload();
+    });
+
+    afterNextRender(() => {
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const section = this.sectionRef()?.nativeElement;
+      if (!section) return;
+
+      if (prefersReduced) {
+        gsap.set(section.querySelectorAll('.section-header, .card'), { opacity: 1, y: 0 });
+        return;
+      }
+
+      this.gsapTl = gsap.timeline({ defaults: { ease: 'power2.out' } });
+      this.gsapTl
+        .from(section.querySelector('.section-header'), { opacity: 0, y: 20, duration: 0.4 })
+        .from(section.querySelectorAll('.product-grid > .card'), { opacity: 0, y: 28, stagger: 0.12, duration: 0.45 }, '-=0.2')
+        .from(section.querySelectorAll('.comparison-grid > .card'), { opacity: 0, y: 24, stagger: 0.12, duration: 0.4 }, '-=0.2');
     });
   }
 
@@ -321,6 +341,7 @@ export class ProductoComponent implements AfterViewInit {
 
   ngOnDestroy(): void {
     this.chart?.destroy();
+    this.gsapTl?.kill();
   }
 }
 

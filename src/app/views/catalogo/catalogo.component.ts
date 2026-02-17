@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { afterNextRender, Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { gsap } from 'gsap';
 
 import type { CatalogoBasicoItem, CatalogoItem } from '../../services/fruver-data.service';
 import { FruverDataService } from '../../services/fruver-data.service';
@@ -16,6 +17,8 @@ type PaginationItem = { kind: 'page'; value: number } | { kind: 'ellipsis' };
 })
 export class CatalogoComponent {
   private readonly fruver = inject(FruverDataService);
+  private readonly sectionRef = viewChild<ElementRef<HTMLElement>>('sectionRef');
+  private tl: gsap.core.Timeline | null = null;
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
@@ -142,6 +145,27 @@ export class CatalogoComponent {
 
   constructor() {
     void this.load();
+
+    afterNextRender(() => {
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const section = this.sectionRef()?.nativeElement;
+      if (!section) return;
+
+      if (prefersReduced) {
+        gsap.set(section.querySelectorAll('.section-header, .filters, .product-section'), { opacity: 1, y: 0 });
+        return;
+      }
+
+      this.tl = gsap.timeline({ defaults: { ease: 'power2.out' } });
+      this.tl
+        .from(section.querySelector('.section-header'), { opacity: 0, y: 20, duration: 0.4 })
+        .from(section.querySelector('.filters'), { opacity: 0, x: -20, duration: 0.45 }, '-=0.2')
+        .from(section.querySelector('.product-section'), { opacity: 0, y: 24, duration: 0.45 }, '-=0.3');
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.tl?.kill();
   }
 
   private async load(): Promise<void> {

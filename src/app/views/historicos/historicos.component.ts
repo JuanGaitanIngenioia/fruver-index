@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { afterNextRender, Component, ElementRef, OnInit, viewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { gsap } from 'gsap';
 
 @Component({
   selector: 'app-historicos',
@@ -9,6 +10,8 @@ import { ActivatedRoute } from '@angular/router';
 })
 export class HistoricosComponent implements OnInit {
   productName: string = 'tomate chonto';
+  private readonly sectionRef = viewChild<ElementRef<HTMLElement>>('sectionRef');
+  private tl: gsap.core.Timeline | null = null;
 
   readonly ranges = ['1S', '1M', '1A', '5A'];
 
@@ -54,13 +57,35 @@ export class HistoricosComponent implements OnInit {
     }
   ];
 
-  constructor(private route: ActivatedRoute) {}
+  constructor(private route: ActivatedRoute) {
+    afterNextRender(() => {
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const section = this.sectionRef()?.nativeElement;
+      if (!section) return;
+
+      if (prefersReduced) {
+        gsap.set(section.querySelectorAll('.section-header, .card, .insight-card, .market-card'), { opacity: 1, y: 0 });
+        return;
+      }
+
+      this.tl = gsap.timeline({ defaults: { ease: 'power2.out' } });
+      this.tl
+        .from(section.querySelector('.section-header'), { opacity: 0, y: 20, duration: 0.4 })
+        .from(section.querySelectorAll('.history-grid > .card'), { opacity: 0, y: 28, stagger: 0.12, duration: 0.45 }, '-=0.2')
+        .from(section.querySelectorAll('.comparison-grid > .card'), { opacity: 0, y: 24, stagger: 0.12, duration: 0.4 }, '-=0.2')
+        .from(section.querySelectorAll('.market-card'), { opacity: 0, y: 20, stagger: 0.1, duration: 0.35 }, '-=0.2');
+    });
+  }
 
   ngOnInit(): void {
-    this.route.params.subscribe(params => {
+    this.route.params.subscribe((params) => {
       if (params['productName']) {
         this.productName = params['productName'];
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.tl?.kill();
   }
 }

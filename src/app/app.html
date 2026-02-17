@@ -1,7 +1,11 @@
 <div class="app">
-  <header class="top-nav">
+  <header class="top-nav" #topNav>
     <div class="logo">
-      <span class="logo-mark">FI</span>
+      <span class="logo-mark" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+      </span>
       <div>
         <p class="logo-title">Fruver Index</p>
         <p class="logo-subtitle">Tu asesor inteligente de precios frescos</p>
@@ -20,13 +24,15 @@
     <router-outlet></router-outlet>
   </main>
 
-  <footer class="footer">
+  <footer class="footer" #footerEl>
     <div>
       <p class="logo-title">Fruver Index</p>
-      <p class="muted">Datos de prueba · Ultima actualizacion: 16 Ene 2026</p>
+      <p class="muted">Última actualización: 16 Ene 2026</p>
     </div>
     <div class="footer-links">
-      <span>Desarrollado por Ingenio Advice</span>
+      <span>Con el apoyo del <strong>Partido Oxígeno Risaralda, Pereira</strong></span>
+      <span>·</span>
+      <span>Desarrollado por <strong>Ingenio Advice S.A.S</strong></span>
     </div>
   </footer>
 
